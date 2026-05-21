@@ -1,137 +1,348 @@
-// 1. Declaração de variáveis
-var chaveStorage    = 'eventosCulturais';
-var formulario      = document.getElementById('formEvento');
-var listaEventos    = document.getElementById('listaEventos');
-var filtroCategoria = document.getElementById('filtroCategoria');
-var filtroData      = document.getElementById('filtroData');
-var campoNome       = document.getElementById('nome');
-var campoData       = document.getElementById('data');
-var campoHorario    = document.getElementById('horario');
-var campoLocal      = document.getElementById('local');
-var campoCategoria  = document.getElementById('categoria');
-var campoDescricao  = document.getElementById('descricao');
+const hoje = new Date();
 
-var eventos = [];
+let anoAtual = hoje.getFullYear();
+let mesAtual = hoje.getMonth();
 
-// 2. Lista inicial de eventos
-var eventosIniciais = [
-  {
-    nome: 'Sarau na Praça',
-    data: '2026-05-22',
-    horario: '19:00',
-    local: 'Praça Central',
-    categoria: 'Música',
-    descricao: 'Apresentações musicais de artistas locais.'
-  },
-  {
-    nome: 'Peça Infantil',
-    data: '2026-05-24',
-    horario: '16:00',
-    local: 'Teatro Municipal',
-    categoria: 'Teatro',
-    descricao: 'Espetáculo infantil para toda a família.'
-  },
-  {
-    nome: 'Feira de Artesanato',
-    data: '2026-05-25',
-    horario: '10:00',
-    local: 'Centro Cultural',
-    categoria: 'Feira',
-    descricao: 'Exposição e venda de artesanato da cidade.'
-  }
+const mesSelect = document.getElementById('mesSelect');
+const anoSelect = document.getElementById('anoSelect');
+const mesAnoTitulo = document.getElementById('mesAnoTitulo');
+const calendarioBody = document.getElementById('calendarioBody');
+const eventosProximosContainer = document.getElementById('eventosProximosContainer');
+
+const nomesMeses = [
+    'Janeiro', 'Fevereiro', 'Março', 'Abril',
+    'Maio', 'Junho', 'Julho', 'Agosto',
+    'Setembro', 'Outubro', 'Novembro', 'Dezembro'
 ];
 
-// 3. Event listeners
-formulario.addEventListener('submit', adicionarEvento);
-filtroCategoria.addEventListener('change', filtrarEventos);
-filtroData.addEventListener('change', filtrarEventos);
+function init() {
 
-// Inicialização
-carregarEventos();
-mostrarEventos(eventos);
-
-// 4. Funções básicas
-function carregarEventos() {
-  var dados = sessionStorage.getItem(chaveStorage);
-
-  if (dados) {
-    eventos = JSON.parse(dados);
-  } else {
-    eventos = eventosIniciais;
-    salvarEventos();
-  }
-}
-
-function salvarEventos() {
-  sessionStorage.setItem(chaveStorage, JSON.stringify(eventos));
-}
-
-function mostrarEventos(lista) {
-  listaEventos.innerHTML = '';
-
-  if (lista.length === 0) {
-    listaEventos.innerHTML = '<p class="text-muted">Nenhum evento encontrado.</p>';
-    return;
-  }
-
-  for (var i = 0; i < lista.length; i++) {
-    var evento = lista[i];
-
-    listaEventos.innerHTML +=
-      '<div class="col-md-6 col-lg-4">' +
-        '<div class="card card-evento">' +
-          '<div class="card-body">' +
-            '<h3 class="h5">' + evento.nome + '</h3>' +
-            '<p class="mb-1"><strong>Data:</strong> ' + evento.data + '</p>' +
-            '<p class="mb-1"><strong>Horário:</strong> ' + evento.horario + '</p>' +
-            '<p class="mb-1"><strong>Local:</strong> ' + evento.local + '</p>' +
-            '<p class="mb-1"><strong>Categoria:</strong> ' + evento.categoria + '</p>' +
-            '<p class="mb-3"><strong>Descrição:</strong> ' + evento.descricao + '</p>' +
-            '<button class="btn btn-sm btn-danger" onclick="excluirEvento(' + i + ')">Excluir</button>' +
-          '</div>' +
-        '</div>' +
-      '</div>';
-  }
-}
-
-function adicionarEvento(e) {
-  e.preventDefault();
-
-  var novoEvento = {
-    nome: campoNome.value,
-    data: campoData.value,
-    horario: campoHorario.value,
-    local: campoLocal.value,
-    categoria: campoCategoria.value,
-    descricao: campoDescricao.value
-  };
-
-  eventos.push(novoEvento);
-  salvarEventos();
-  filtrarEventos();
-  formulario.reset();
-}
-
-function excluirEvento(indice) {
-  eventos.splice(indice, 1);
-  salvarEventos();
-  filtrarEventos();
-}
-
-function filtrarEventos() {
-  var categoriaEscolhida = filtroCategoria.value;
-  var dataEscolhida = filtroData.value;
-  var listaFiltrada = [];
-
-  for (var i = 0; i < eventos.length; i++) {
-    var evento = eventos[i];
-    var categoriaOk = categoriaEscolhida === 'Todos' || evento.categoria === categoriaEscolhida;
-    var dataOk = dataEscolhida === '' || evento.data === dataEscolhida;
-
-    if (categoriaOk && dataOk) {
-      listaFiltrada.push(evento);
+    // EVENTOS DE TESTE - remover depois
+    if (!localStorage.getItem('todosEventos')) {
+        const a = anoAtual, m = mesAtual;
+        const dados = {};
+        dados[`${a}_${m}_21`] = [{ id: 1, ano: a, mes: m, dia: 21, titulo: "Evento Teste", tipo: "cultural", horario: "19:00", descricao: "Teste.", linkIngressos: "", imagemUrl: "" }];
+        dados[`${a}_${m}_23`] = [{ id: 2, ano: a, mes: m, dia: 23, titulo: "Show de Jazz", tipo: "show", horario: "21:00", descricao: "Jazz.", linkIngressos: "", imagemUrl: "" }];
+        localStorage.setItem('todosEventos', JSON.stringify(dados));
+        console.log("✅ Eventos de teste criados");
     }
-  }
 
-  mostrarEventos(listaFiltrada);
+
+    mesSelect.value = mesAtual;
+
+    const anoAtualVal = new Date().getFullYear();
+    anoSelect.innerHTML = '';
+    for (let a = anoAtualVal ; a <= anoAtualVal + 10; a++) {
+        const opt = document.createElement('option');
+        opt.value = a;
+        opt.textContent = a;
+        if (a === anoAtual) opt.selected = true;
+        anoSelect.appendChild(opt);
+    }
+
+    atualizarTitulo();
+    renderizarCalendario();
+    carregarProximosEventos();
+
+    mesSelect.addEventListener('change', () => {
+        mesAtual = parseInt(mesSelect.value);
+        atualizarTitulo();
+        renderizarCalendario();
+        carregarProximosEventos();
+    });
+
+    anoSelect.addEventListener('change', () => {
+        anoAtual = parseInt(anoSelect.value);
+        atualizarTitulo();
+        renderizarCalendario();
+        carregarProximosEventos();
+    });
+
+    document.getElementById('registrarEventoBtn')
+        ?.addEventListener('click', () => {
+            window.location.href = 'formulario.html';
+        });
 }
+
+
+function atualizarTitulo() {
+    mesAnoTitulo.textContent =
+        `${nomesMeses[mesAtual].toLowerCase()} ${anoAtual}`;
+}
+
+
+function getEventosPorData(ano, mes, dia) {
+
+    const todosEventos = localStorage.getItem('todosEventos');
+    if (!todosEventos) return [];
+
+    const eventosObj = JSON.parse(todosEventos);
+    const chave = `${ano}_${mes}_${dia}`;
+
+    return eventosObj[chave] || [];
+}
+
+// ============================================================
+// CALENDÁRIO
+// ============================================================
+
+function renderizarCalendario() {
+
+    const primeiroDia = new Date(anoAtual, mesAtual, 1);
+    const ultimoDia = new Date(anoAtual, mesAtual + 1, 0);
+
+    const diaInicioSemana = primeiroDia.getDay();
+    const totalDias = ultimoDia.getDate();
+
+    const dataMesAnterior = new Date(anoAtual, mesAtual, 0);
+    const totalDiasMesAnterior = dataMesAnterior.getDate();
+
+    let html = '';
+    let diaCount = 0;
+
+    // Dias do mês anterior
+    for (let i = diaInicioSemana - 1; i >= 0; i--) {
+        const dia = totalDiasMesAnterior - i;
+
+        html += `
+            <td class="other-month">
+                <div class="day-number">${dia}</div>
+            </td>
+        `;
+
+        diaCount++;
+    }
+
+    const hojeLocal = new Date();
+
+    const ehMesAtual =
+        hojeLocal.getFullYear() === anoAtual &&
+        hojeLocal.getMonth() === mesAtual;
+
+    // Dias do mês atual
+    for (let dia = 1; dia <= totalDias; dia++) {
+
+        const eventos = getEventosPorData(anoAtual, mesAtual, dia);
+        const temEvento = eventos.length > 0;
+
+        const isToday =
+            ehMesAtual && hojeLocal.getDate() === dia;
+
+        let eventosHtml = '';
+
+        if (temEvento) {
+
+            eventos.slice(0, 2).forEach(evento => {
+                eventosHtml += `
+                    <div class="event-badge"
+                        onclick="event.stopPropagation(); verEventos(${anoAtual}, ${mesAtual}, ${dia})">
+                        ${evento.titulo.substring(0, 12)}
+                    </div>
+                `;
+            });
+
+            if (eventos.length > 2) {
+                eventosHtml += `
+                    <div class="event-more"
+                        onclick="event.stopPropagation(); verEventos(${anoAtual}, ${mesAtual}, ${dia})">
+                        +${eventos.length - 2} outros
+                    </div>
+                `;
+            }
+        }
+
+        html += `
+            <td class="${isToday ? 'today' : ''}"
+                onclick="verEventos(${anoAtual}, ${mesAtual}, ${dia})">
+
+                <div class="day-number">${dia}</div>
+                ${eventosHtml}
+            </td>
+        `;
+
+        diaCount++;
+
+        if (diaCount % 7 === 0 && dia !== totalDias) {
+            html += `</tr><tr>`;
+        }
+    }
+
+    // Dias do próximo mês
+    const diasRestantes = 7 - (diaCount % 7);
+
+    if (diasRestantes < 7) {
+        for (let dia = 1; dia <= diasRestantes; dia++) {
+            html += `
+                <td class="other-month">
+                    <div class="day-number">${dia}</div>
+                </td>
+            `;
+        }
+    }
+
+    calendarioBody.innerHTML = `<tr>${html}</tr>`;
+}
+
+// ============================================================
+// ABRIR EVENTOS DO DIA
+// ============================================================
+
+function verEventos(ano, mes, dia) {
+
+    const eventos = getEventosPorData(ano, mes, dia);
+
+    localStorage.setItem('eventosSelecionados', JSON.stringify({
+        ano,
+        mes,
+        dia,
+        eventos,
+        eventoUnico: false
+    }));
+
+    window.location.href = 'eventos.html';
+}
+
+function verEvento(ano, mes, dia) {
+    verEventos(ano, mes, dia);
+}
+
+// ============================================================
+// PRÓXIMOS EVENTOS
+// ============================================================
+
+function carregarProximosEventos() {
+
+    const todosEventos = localStorage.getItem('todosEventos');
+
+    if (!todosEventos) {
+        eventosProximosContainer.innerHTML = `
+            <div class="card-eventos">
+                <h3>📅 Próximos Eventos</h3>
+                <p>Nenhum evento próximo registrado.</p>
+            </div>
+        `;
+        return;
+    }
+
+    const eventosObj = JSON.parse(todosEventos);
+    let proximosEventos = [];
+
+    for (let i = 0; i < 30; i++) {
+
+        const data = new Date(anoAtual, mesAtual, 1 + i);
+        if (data.getMonth() > mesAtual + 1) break;
+
+        const ano = data.getFullYear();
+        const mes = data.getMonth();
+        const dia = data.getDate();
+
+        const chave = `${ano}_${mes}_${dia}`;
+
+        if (eventosObj[chave]) {
+            eventosObj[chave].forEach(evento => {
+                proximosEventos.push({
+                    ...evento,
+                    data: `${dia}/${mes + 1}/${ano}`
+                });
+            });
+        }
+    }
+
+    proximosEventos.sort((a, b) => {
+
+        const [dA, mA, aA] = a.data.split('/');
+        const [dB, mB, aB] = b.data.split('/');
+
+        return new Date(aA, mA - 1, dA) -
+               new Date(aB, mB - 1, dB);
+    });
+
+    const eventosExibir = proximosEventos.slice(0, 5);
+
+    if (eventosExibir.length === 0) {
+        eventosProximosContainer.innerHTML = `
+            <div class="card-eventos">
+                <h3>📅 Próximos Eventos</h3>
+                <p>Nenhum evento próximo registrado.</p>
+            </div>
+        `;
+        return;
+    }
+
+    let html = `<div class="card-eventos"><h3>📅 Próximos Eventos</h3>`;
+
+    eventosExibir.forEach(evento => {
+
+        const tipoMap = {
+            cultural: '🎭 Cultural',
+            show: '🎤 Show/Música',
+            teatro: '🎪 Teatro/Dança',
+            oficina: '📚 Oficina/Workshop',
+            exposicao: '🖼️ Exposição/Museu',
+            festival: '🎉 Festival/Feira',
+            palestra: '🎓 Palestra/Debate',
+            outro: '✨ Outro'
+        };
+
+        html += `
+            <div class="evento-item"
+                onclick="verEventoPorData('${evento.data}', '${evento.id}')">
+
+                <div class="evento-data">📅 ${evento.data}</div>
+                <strong>${evento.titulo}</strong>
+                <div>⏰ ${evento.horario} | ${tipoMap[evento.tipo] || '🎭 Cultural'}</div>
+            </div>
+        `;
+    });
+
+    html += `</div>`;
+    eventosProximosContainer.innerHTML = html;
+}
+
+// ============================================================
+// VER EVENTO ESPECÍFICO
+// ============================================================
+
+function verEventoPorData(dataStr, eventoId) {
+
+    const [dia, mes, ano] = dataStr.split('/');
+
+    const eventos = getEventosPorData(
+        parseInt(ano),
+        parseInt(mes) - 1,
+        parseInt(dia)
+    );
+
+    const eventoEspecifico = eventos.filter(
+        e => e.id.toString() === eventoId.toString()
+    );
+
+    localStorage.setItem('eventosSelecionados', JSON.stringify({
+        ano: parseInt(ano),
+        mes: parseInt(mes) - 1,
+        dia: parseInt(dia),
+        eventos: eventoEspecifico,
+        eventoUnico: true
+    }));
+
+    window.location.href = 'eventos.html';
+}
+
+// ============================================================
+// GLOBAL
+// ============================================================
+
+window.verEventos = verEventos;
+window.verEvento = verEvento;
+window.verEventoPorData = verEventoPorData;
+
+// ============================================================
+// START
+// ============================================================
+
+init();
+
+window.addEventListener('pageshow', () => {
+    renderizarCalendario();
+    carregarProximosEventos();
+});
