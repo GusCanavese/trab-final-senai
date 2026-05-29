@@ -1,71 +1,100 @@
 const form = document.getElementById('eventoForm');
 const titulo = document.getElementById('titulo');
 const tipo = document.getElementById('tipo');
-const horario = document.getElementById('horario');
+const horarioInicio = document.getElementById('horarioInicio');
+const horarioFim = document.getElementById('horarioFim');
 const descricao = document.getElementById('descricao');
 const linkIngressos = document.getElementById('linkIngressos');
-const dataEvento = document.getElementById('dataEvento');
-const dataInicio = document.getElementById('dataInicio');
-const dataFim = document.getElementById('dataFim');
+const dataInicioEvento = document.getElementById('dataInicioEvento');
+const dataFimEvento = document.getElementById('dataFimEvento');
 const erroDataFim = document.getElementById('errorDataFim');
 
-document.getElementById('btnVoltar').onclick = () => location.href = 'index.html';
-const baseData = JSON.parse(
-  localStorage.getItem('dataSelecionada') || localStorage.getItem('eventosSelecionados') || 'null'
-);
+const usuarioLogado = JSON.parse(localStorage.getItem('usuarioLogado') || 'null');
+const isAdmin = usuarioLogado?.u === 'admin' && usuarioLogado?.r === 'admin';
 
-if (baseData) {
-  dataEvento.value = `${baseData.ano}-${String(baseData.mes + 1).padStart(2, '0')}-${String(baseData.dia).padStart(2, '0')}`;
-}
-
+/* FUNÇÃO PRINCIPAL: Verifica se há dados guardados na chave 'eventoEditando' 
+  do localStorage. Se sim, preenche automaticamente os inputs (Modo Edição).
+*/
 const editando = JSON.parse(localStorage.getItem('eventoEditando') || 'null');
 if (editando) {
+  document.querySelector('.card-header h2').textContent = '✏️ Editar Evento';
   titulo.value = editando.titulo || '';
   tipo.value = editando.tipo || 'cultural';
-  horario.value = editando.horario || '';
+  horarioInicio.value = editando.horarioInicio || '';
+  horarioFim.value = editando.horarioFim || '';
   descricao.value = editando.descricao || '';
   linkIngressos.value = editando.linkIngressos || '';
-  dataInicio.value = editando.dataInicio || '';
-  dataFim.value = editando.dataFim || '';
+  dataInicioEvento.value = editando.dataInicioEvento || '';
+  dataFimEvento.value = editando.dataFimEvento || '';
 }
 
+// --- EVENTO DE SUBMISSÃO (SALVAR/ATUALIZAR) ---
+
+/* FUNÇÃO PRINCIPAL: Intercepta o envio do formulário, valida consistência de datas 
+  e envia os dados via requisição POST (JSON) para a API PHP com travas de autenticação admin.
+*/
 form.addEventListener('submit', e => {
   e.preventDefault();
 
-  if (dataFim.value < dataInicio.value) {
+  // Validação lógica básica de datas
+  const dInicio = new Date(dataInicioEvento.value + 'T00:00:00');
+  const dFim = new Date(dataFimEvento.value + 'T00:00:00');
+
+  const dataFimInvalida = dFim < dInicio;
+  const horarioFimInvalido = dataInicioEvento.value === dataFimEvento.value && horarioFim.value && horarioFim.value < horarioInicio.value;
+
+  if (dataFimInvalida || horarioFimInvalido) {
     return erroDataFim.style.display = 'block';
   }
-
   erroDataFim.style.display = 'none';
 
-  const [ano, mes, dia] = (dataEvento.value || new Date().toISOString().slice(0, 10)).split('-').map(Number);
+  const nomeDoEvento = titulo.value.trim();
+
+  // Estrutura o objeto de acordo com as colunas da tabela MySQL
   const evento = {
-    id: editando?.id || Date.now(),
-    ano,
-    mes: mes - 1,
-    dia,
-    titulo: titulo.value.trim(),
+    titulo: nomeDoEvento,
     tipo: tipo.value,
-    horario: horario.value,
+    horarioInicio: horarioInicio.value,
+    horarioFim: horarioFim.value,
     descricao: descricao.value.trim(),
     linkIngressos: linkIngressos.value.trim(),
-    dataInicio: dataInicio.value,
-    dataFim: dataFim.value
+    dataInicioEvento: dataInicioEvento.value,
+    dataFimEvento: dataFimEvento.value
   };
-  const todos = JSON.parse(localStorage.getItem('todosEventos') || '{}');
 
+  // Se o formulário estiver em modo Edição, anexa o ID original para o PHP realizar um UPDATE
   if (editando) {
-    const chaveAntiga = `${editando.ano}_${editando.mes}_${editando.dia}`;
-    todos[chaveAntiga] = (todos[chaveAntiga] || []).filter(x => String(x.id) !== String(editando.id));
+    evento.id = editando.id;
   }
 
-  const chave = `${evento.ano}_${evento.mes}_${evento.dia}`;
-  todos[chave] = [...(todos[chave] || []), evento];
-  localStorage.setItem('todosEventos', JSON.stringify(todos));
-  localStorage.setItem(
-    'dataSelecionada',
-    JSON.stringify({ ano: evento.ano, mes: evento.mes, dia: evento.dia })
-  );
-  localStorage.removeItem('eventoEditando');
-  location.href = 'index.html';
+  // Faz o pedido para o garçom PHP, injetando as credenciais salvas no login
+  fetch('../api/eventos.php', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'X-Admin-User': usuarioLogado?.u || '',
+      'X-Admin-Pass': usuarioLogado?.s || ''
+    },
+    body: JSON.stringify(evento)
+  })
+  .then(res => {
+    if (res.status === 403) throw new Error("Acesso negado! Apenas o administrador logado pode realizar esta ação.");
+    if (!res.ok) throw new Error("Ocorreu um erro no servidor ao tentar salvar.");
+    return res.json();
+  })
+  .then(dados => {
+    if (dados.sucesso) {
+      alert(`Evento "${nomeDoEvento}" salvo com sucesso no banco de dados!`);
+      localStorage.removeItem('eventoEditando'); // Limpa o estado de edição
+      window.location.href = 'index.html';
+    } else {
+      alert("Erro enviado pelo banco: " + dados.erro);
+    }
+  })
+  .catch(err => alert(err.message));
 });
+
+document.getElementById('btnVoltar').onclick = () => {
+  localStorage.removeItem('eventoEditando');
+  window.location.href = 'index.html';
+};
