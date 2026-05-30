@@ -68,7 +68,7 @@ form.addEventListener('submit', e => {
   }
 
   // Faz o pedido para o garçom PHP, injetando as credenciais salvas no login
-  fetch('../api/eventos.php', {
+  fetch('/api/eventos.php', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',

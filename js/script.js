@@ -27,7 +27,10 @@ if (btnSair) {
     };
   } else {
     btnSair.style.display = 'none';
-    if (loginBtn) loginBtn.style.display = 'inline-block';
+    if (loginBtn) {
+      loginBtn.style.display = 'inline-block';
+      loginBtn.onclick = () => location.href = 'login.html';
+    }
   }
 }
 
@@ -38,7 +41,7 @@ let todosEventosBanco = []; // Armazena temporariamente os dados vindos do MySQL
   eventos cadastrados na tabela do MySQL e ordena o início do calendário.
 */
 function carregarEventosDoServidor() {
-  fetch('api/eventos.php')
+  fetch('/api/eventos.php')
     .then(res => res.json())
     .then(dados => {
       if (dados.erro) {

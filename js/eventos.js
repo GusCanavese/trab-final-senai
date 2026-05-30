@@ -15,7 +15,7 @@ const { ano, mes, dia } = selecionados;
 /* FUNÇÃO PRINCIPAL: Faz a chamada GET para a API buscando todos os dados reais do MySQL, 
   filtra apenas as ocorrências do dia selecionado e engata o início da construção da tela.
 */
-fetch('../api/eventos.php')
+fetch('/api/eventos.php')
   .then(res => res.json())
   .then(todosEventos => {
     const mesFormatado = String(mes + 1).padStart(2, '0');
@@ -95,7 +95,7 @@ function initTela(eventos, dataTexto, todosGerais) {
 
       const idEvento = btn.dataset.id;
 
-      fetch(`../api/eventos.php?id=${idEvento}`, {
+      fetch(`/api/eventos.php?id=${idEvento}`, {
         method: 'DELETE',
         headers: {
           'X-Admin-User': usuarioLogado?.u || '',
